@@ -1,13 +1,12 @@
-; rasters
 ;
-; create some nice rasters
-; ST NEWS 4.3
-; A Digital Insanity creation
+; Fullscreen vertical scroll
+; 
 
                 clr.l   -(sp)		supervisor mode on
                 move.w  #$20,-(sp)
                 trap    #1
                 move.l  d0,savereg
+
                 move.l  #$70000,a7
 
                 move.l  #moff,-(sp)	mouse off
@@ -81,7 +80,6 @@ hblon:          move.l  $120,oldtb
                 move.b  $fffffa1b,old1b
                 and.b   #$df,$fffa09
                 and.b   #$fe,$fffa07 
-                move.l  #newtb1,$120
                 move.l  #new4,$70
                 or.b    #1,$fffffa07
                 or.b    #1,$fffffa13
@@ -110,113 +108,38 @@ old1b:          dc.b    0
                 even
 
 ; This is the new VBL handler
-new4:           clr.b   $fffffa1b.w
-                move.b  #40,$fffffa21	; first raster at line 40
-                move.b  #8,$fffffa1b
-                move.w  #$0,$ff8240	; black screen
-                move.l  #newtb1,$120	; Timer B vector
+new4:           
+                movem.l d0-a7,-(sp)
+
+                lea    currentscreen,a0
+                move.l (a0),d0
+
+                cmp.l  #8,d0
+                blt update_screen
+
+                clr.l  d0
+
+update_screen:
+                move.l  d0,d1
+
+                add.l   #1,d1
+                lea     currentscreen,a0
+                move.l  d1,(a0)                
+
+                lsl.l   #2,d0
+                lea     screenptr,a0
+                add.l   d0,a0
+                move.l  (a0),d0
+
+		lsr.l	#8,d0
+		move.b	d0,$ff8203
+		lsr 	#8,d0
+		move.b	d0,$ff8201                
+
+                movem.l (sp)+,d0-a7
+                rte 
+
 new4b:          jmp     $12345678
-
-newtb1:         clr.b   $fffffa1b.w     ;timer stop
-                movem.l d0-d7/a0-a1,-(sp)
-                move.w  #$fa21,a1
-		move.b	#40,(a1)	; second one at line 80
-                move.l  #newtb2,$120
-                move.b  #8,$fffffa1b.w
-
-                moveq.w #27,d2	      ; number of colors in table
-                move.l  #pal1,a0      ; pal1: color table
-loop            move.b  (a1),d0
-wait:           cmp.b   (a1),d0	      ; wait one scanline
-                beq     wait
-                move.w  (a0)+,d1
-		move.w	d1,$ff8240    ; set colors
-		move.w	d1,$ff8242
-		move.w	d1,$ff8244
-		move.w	d1,$ff8246
-		move.w	d1,$ff8248
-		move.w	d1,$ff824a
-		move.w	d1,$ff824c
-		move.w	d1,$ff824e
-                dbra    d2,loop
-
-		movem.l	pal1,d1-d7/a0
-loopx		move.b	(a1),d0
-waitx		cmp.b	(a1),d0
-		beq	waitx
-		movem.l	d1-d7/a0,$ff8240
-                
-                movem.l (sp)+,d0-d7/a0-a1
-                bclr    #0,$fffffa0f.w  ;end of interrupt
-                rte
-
-newtb2:         clr.b   $fffffa1b.w     ;timer stop
-                movem.l d0-d7/a0-a1,-(sp)
-                move.w  #$fa21,a1
-                move.b  #40,(a1)	; third one at line 120
-                move.l  #newtb3,$120
-                move.b  #8,$fffffa1b.w
-
-                move.w  #14,d1		; raster is 14 scanlines
-                move.l  #pal1,a0
-loop2           move.b  (a1),d0
-wait2           cmp.b   (a1),d0
-                beq     wait2
-                move.w  (a0)+,$ff8240
-                dbra    d1,loop2
-
-		movem.l	pal1,d1-d7/a0
-		move.b	(a1),d0
-waity		cmp.b	(a1),d0
-		beq	waity
-		movem.l	d1-d7/a0,$ff8240
-                
-                movem.l (sp)+,d0-d7/a0-a1
-                bclr    #0,$fffffa0f.w  ;end of interrupt
-                rte
-
-newtb3:         clr.b   $fffffa1b.w     ;timer stop
-                movem.l d0-d7/a0-a1,-(sp)
-                move.w  #$fa21,a1
-                move.b  #79,(a1)	; kill border at line 199
-                move.l  #killborder,$120
-                move.b  #8,$fffffa1b.w
-
-                move.w  #14,d1
-                move.l  #pal1+26,a0
-loop3           move.b  (a1),d0
-wait3           cmp.b   (a1),d0
-                beq     wait3
-                move.w  (a0)+,$ff8240
-                dbra    d1,loop3
-
-		movem.l	pal1,d1-d7/a0
-		move.b	(a1),d0
-waitz		cmp.b	(a1),d0
-		beq	waitz
-		movem.l	d1-d7/a0,$ff8240
-                
-                movem.l (sp)+,d0-d7/a0-a1
-                bclr    #0,$fffffa0f.w  ;end of interrupt
-                rte
-
-killborder      clr.b   $fffffa1b.w     ;timer stop
-                movem.l d0-d1/a0-a1,-(sp)
-                move.w  #$fa21,a1
-                move.b  #200,(a1)
-                move.b  #8,$fffffa1b.w
-
-                move.b  (a1),d0
-wait4:          cmp.b   (a1),d0		; wait last scanline
-                beq     wait4		
-                clr.b   $ffff820a.w     ;60 Hz
-                moveq   #4,d0
-nopi2:          nop			; wait a while
-                dbf     d0,nopi2
-                move.b  #2,$ffff820a.w  ;50 Hz
-                movem.l (sp)+,d0-d1/a0-a1       
-                bclr    #0,$fffffa0f.w  ;end of interrupt
-                rte
 
 ; now some routines to set the graphics
 
@@ -227,23 +150,93 @@ prepare:        move.w  #0,-(sp)        ;set low res
                 trap    #14
                 add.l   #12,sp
 
-                movem.l graphic(pc),d6-d7
-                move.l  screen(pc),a0
-                move.w  #260-1,d1       ;fill 260 scanlines
+		lea	screens,a0
+		move.l  a0,d0
+		add.l   #$ff,d0
 
-line:           moveq   #20-1,d0        ;20 planes = one scanline
-fill:           move.l  d6,(a0)+
-                move.l  d7,(a0)+
+		move.l  #$ffffff00,d1
+
+		and.l   d1,d0
+
+		lea     screenptr,a1
+		move.l  #4-1,d1
+setscreens:
+		move.l  d0,(a1)+
+		add.l	#(320*200*4)/8,d0
+		dbra    d1,setscreens
+
+                clr.l   d5
+
+                lea     screenptr,a1
+                move.l  (a1),a0
+
+                lea     graphic,a2
+
+                moveq   #8-1,d3        ; 4 screens make up the animation
+
+screen_loop:
+                move.w  #25-1,d2       ;25 tiles fill the whole screen
+
+line: 
+                moveq   #8-1,d1        ;tiles are 8 pixel high
+                move.l  a2,a1
+
+tile:
+                moveq   #10-1,d0        ;10 32 pixel wide tiles per scanline
+                movem.w (a1),d6-d7 
+
+fill:           move.w  d6,(a0)+
+		move.w  d5,(a0)+
+		move.w  d5,(a0)+
+		move.w  d5,(a0)+
+
+                move.w  d7,(a0)+
+		move.w  d5,(a0)+
+		move.w  d5,(a0)+
+		move.w  d5,(a0)+                
                 dbf     d0,fill
-                dbf     d1,line
+
+                add.l   #4,a1         ; move to the next line in the tile
+                dbf     d1,tile
+                
+                dbf     d2,line
+
+                add.l   #4,a2          ; move down one lines in the tile
+
+                dbf     d3,screen_loop
 
                 movem.l pal1(pc),d0-d3
                 movem.l d0-d3,$ffff8240.w
+
+
+                clr.l  d0
+                lea    currentscreen,a0
+                move.l d0,(a0)
                 rts
 
-graphic:	dc.w    $55AA,$33CC,$0FF0,$0000
+graphic:        ; Logo, 32 by 8 pixels by 1 bitplane
+         	dc.w    $FEFE,$FEFE
+                dc.w    $0602,$8202
+                dc.w    $0C02,$8202
+                dc.w    $18FE,$82FE
+                dc.w    $6002,$8202
+                dc.w    $C002,$8202
+                dc.w    $FEFE,$FEFE
+                dc.w    $0000,$0000
 
-pal1:           dc.w    $000,$111,$222,$333,$444,$555,$666,$777
-                dc.w    $666,$555,$444,$333,$222,$111
-                dc.w    $001,$002,$003,$004,$005,$006,$007
-                dc.w    $006,$005,$004,$003,$002,$001,$000
+ 	        dc.w    $FEFE,$FEFE
+                dc.w    $0602,$8202
+                dc.w    $0C02,$8202
+                dc.w    $18FE,$82FE
+                dc.w    $6002,$8202
+                dc.w    $C002,$8202
+
+pal1:           dc.w    $777,$000,$222,$333
+                dc.w    $444,$555,$666,$777
+                dc.w    $666,$555,$444,$333
+                dc.w    $222,$111,$001,$002
+
+currentscreen   dc.l    1
+screenptr       dc.l    4
+
+screens		ds.b    256+(((320*200*4)/8)*8)
