@@ -2,61 +2,61 @@
 ; Fullscreen vertical scroll
 ; 
 
-                clr.l   -(sp)		supervisor mode on
+                clr.l   -(sp)		        supervisor mode on
                 move.w  #$20,-(sp)
                 trap    #1
                 move.l  d0,savereg
 
                 move.l  #$70000,a7
 
-                move.l  #moff,-(sp)	mouse off
+                move.l  #moff,-(sp)	        mouse off
                 clr.w   -(sp)
                 move.w  #25,-(sp)
                 trap    #14
                 addq.l  #8,sp
                 dc.w    $a00a
 
-                move.w  #4,-(sp)	get resolution        
+                move.w  #4,-(sp)	        get resolution        
                 trap    #14
                 addq.l  #2,sp
                 move.w  d0,oldrez
                 move.l  $44e,oldscr
                 move.l  #$70000,screen
 
-                movem.l $ffff8240.w,d0-d7	set colors
+                movem.l $ffff8240.w,d0-d7	save colours
                 movem.l d0-d7,oldpal
 
-                bsr     prepare		put some graphics on screen
-                bsr     hblon		enable interrupts
+                bsr     prepare		        put some graphics on screen
+                bsr     hblon		        enable interrupts
 
-                move.w  #1,-(sp)	wait for a key
+                move.w  #1,-(sp)	        wait for a key
                 trap    #1
                 addq.l  #2,sp
 
-                bsr     hbloff		disable interrupts
+                bsr     hbloff		        disable interrupts
 
-                movem.l oldpal,d0-d7	old colors back
+                movem.l oldpal,d0-d7	        old colours back
                 movem.l d0-d7,$ffff8240.w
-                move.w  oldrez,-(sp)	old resolution back
-                move.l  oldscr,-(sp)
+                move.w  oldrez,-(sp)	        old resolution back
+                move.l  oldscr,-(sp)            old screen back
                 move.l  oldscr,-(sp)
                 move.w  #5,-(sp)
                 trap    #14
                 add.l   #12,sp
 
-                move.l  #mon,-(sp)	mouse on
+                move.l  #mon,-(sp)	        mouse on
                 clr.w   -(sp)
                 move.w  #25,-(sp)
                 trap    #14
                 addq.l  #8,sp
                 dc.w    $a009
 
-                move.l  savereg,-(sp)	leave supervisor
+                move.l  savereg,-(sp)	        leave supervisor
                 move.w  #$20,-(sp)
                 trap    #1
                 addq.l  #6,sp
 
-                clr.w   -(sp)		sayonara!
+                clr.w   -(sp)		        exit
                 trap    #1
 
 oldrez:         dc.w    0
@@ -114,7 +114,7 @@ new4:
                 lea    currentscreen,a0
                 move.l (a0),d0
 
-                cmp.l  #8,d0
+                cmp.l  #4,d0
                 blt update_screen
 
                 clr.l  d0
@@ -172,7 +172,7 @@ setscreens:
 
                 lea     graphic,a2
 
-                moveq   #8-1,d3        ; 4 screens make up the animation
+                moveq   #4-1,d3        ; 4 screens make up the animation
 
 screen_loop:
                 move.w  #25-1,d2       ;25 tiles fill the whole screen
@@ -201,7 +201,7 @@ fill:           move.w  d6,(a0)+
                 
                 dbf     d2,line
 
-                add.l   #4,a2          ; move down one lines in the tile
+                add.l   #8,a2          ; move down one lines in the tile
 
                 dbf     d3,screen_loop
 
@@ -239,4 +239,4 @@ pal1:           dc.w    $777,$000,$222,$333
 currentscreen   dc.l    1
 screenptr       dc.l    4
 
-screens		ds.b    256+(((320*200*4)/8)*8)
+screens		ds.b    256+(((320*200*4)/8)*4)
